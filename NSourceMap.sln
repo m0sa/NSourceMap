@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.25428.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3173CC56-AB48-4686-890D-53877E4DA955}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B27563AA-6D46-42B0-B79E-7A96D5E59BCC}"
+	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
+	EndProjectSection
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NSourceMap", "src\NSourceMap\NSourceMap.xproj", "{D2C3E782-B7D0-40D1-9796-809B7BD53022}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022} = {3173CC56-AB48-4686-890D-53877E4DA955}
+	EndGlobalSection
+EndGlobal
