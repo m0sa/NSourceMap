@@ -12,6 +12,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NSourceMap", "src\NSourceMap\NSourceMap.xproj", "{D2C3E782-B7D0-40D1-9796-809B7BD53022}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0CDFA53E-F408-4F39-A16F-98C7DDFEFA14}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NSourceMap.Tests", "tests\NSourceMap.Tests\NSourceMap.Tests.xproj", "{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,11 +26,16 @@ Global
 		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D2C3E782-B7D0-40D1-9796-809B7BD53022}.Release|Any CPU.Build.0 = Release|Any CPU
+		{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D2C3E782-B7D0-40D1-9796-809B7BD53022} = {3173CC56-AB48-4686-890D-53877E4DA955}
+		{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B} = {0CDFA53E-F408-4F39-A16F-98C7DDFEFA14}
 	EndGlobalSection
 EndGlobal
