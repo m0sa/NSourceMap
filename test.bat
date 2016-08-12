@@ -1,0 +1,1 @@
+dotnet -v test tests/NSourceMap.Tests
