@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jil;
-
+using static NSourceMap.Constants;
+    
 namespace NSourceMap
 {
     public sealed class SourceMapConsumer : ISourceMapConsumer, ISourceMappingReversable
     {
-        private const int UNMAPPED = -1;
         private int _lineCount;
 
         // Slots in the _lines list will be null if the line does not have any entries.
