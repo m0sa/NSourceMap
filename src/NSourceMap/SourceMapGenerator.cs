@@ -164,7 +164,7 @@ namespace NSourceMap
                 originalPosition = sourceStartPosition,
                 symbolName = symbolName,
                 startPosition = adjustedStart,
-                endPosition = adjustedEnd
+                // endPosition = adjustedEnd
             };
 
             // Validate the mappings are in a proper order.
@@ -258,13 +258,13 @@ namespace NSourceMap
 
             var maxLine = 0;
             // Mark any unused mappings.
-            new MappingTraversal(this).Traverse((m, start, end) => maxLine = Math.Max(maxLine, m.endPosition?.Line ?? 0));
+            new MappingTraversal(this).Traverse((m, start) => maxLine = Math.Max(maxLine, (m.startPosition?.Line ?? 0) + 1));
 
             // Adjust for the prefix.
             lineCount = maxLine + _prefixPosition.Line + 1;
 
 
-            new MappingTraversal(this).Traverse((m, current, next) =>
+            new MappingTraversal(this).Traverse((m, current) =>
 
             {
                 if (previousLine != current.Line)
@@ -272,11 +272,13 @@ namespace NSourceMap
                     previousColumn = 0;
                 }
 
-                if (current.Line != next.Line || current.Column != next.Column)
+                if (current.Line != previousLine || current.Column != previousColumn)
                 {
-                    // TODO(johnlenz): For some reason, we have mappings beyond the max line.
-                    // So far they're just null mappings and we can ignore them.
-                    // (If they're non-null, we assert-fail.)
+                    for (var i = Math.Max(0, previousLine); i < current.Line && i < maxLine; i++)
+                    {
+                        mappingsBuilder.Append(";"); // close line
+                    }
+
                     if (current.Line < maxLine)
                     {
                         if (previousLine == current.Line)
@@ -320,17 +322,10 @@ namespace NSourceMap
                     {
                         Preconditions.checkState(m == null);
                     }
+                } else {
+
                 }
 
-                for (var i = current.Line; i <= next.Line && i < maxLine; i++)
-                {
-                    if (i == next.Line)
-                    {
-                        break;
-                    }
-
-                    mappingsBuilder.Append(";"); // close line
-                }
             });
             mappingsBuilder.Append(";");
             var mappings = mappingsBuilder.ToString();
@@ -346,12 +341,11 @@ namespace NSourceMap
             public string sourceFile;
             public FilePosition originalPosition;
             public FilePosition startPosition;
-            public FilePosition endPosition;
             public string symbolName;
             public bool used;
         }
 
-        private delegate void MappingVisitor(Mapping m, FilePosition start, FilePosition end);
+        private delegate void MappingVisitor(Mapping m, FilePosition start);
 
         /**
          * Walk the mappings and visit each segment of the _mappings, unmapped
@@ -359,108 +353,20 @@ namespace NSourceMap
          */
         private class MappingTraversal
         {
-            // The last line and column written
-            private FilePosition _previousPosition;
             private readonly SourceMapGenerator _parent;
 
             public MappingTraversal(SourceMapGenerator parent)
             {
                 _parent = parent;
-                _previousPosition = new FilePosition(0, 0);
             }
 
             // Append the line mapping entries.
             public void Traverse(MappingVisitor visitor)
             {
-                // The mapping list is ordered as a pre-order traversal.  The mapping
-                // positions give us enough information to rebuild the stack and this
-                // allows the building of the source map in O(n) time.
-                var stack = new Stack<Mapping>();
                 foreach (var m in _parent._mappings)
                 {
-                    // Find the closest ancestor of the current mapping:
-                    // An overlapping mapping is an ancestor of the current mapping, any
-                    // non-overlapping mappings are siblings (or cousins) and must be
-                    // closed in the reverse order of when they encountered.
-                    while (stack.Any() && !isOverlapped(stack.Peek(), m))
-                    {
-                        maybeVisit(visitor, stack.Pop());
-                    }
-
-                    // Any gaps between the current line position and the start of the
-                    // current mapping belong to the parent.
-                    maybeVisitParent(visitor, stack.Any() ? stack.Peek() : null, m);
-
-                    stack.Push(m);
+                    visitor(m, m.startPosition);
                 }
-
-                // There are no more children to be had, simply close the remaining
-                // mappings in the reverse order of when they encountered.
-                while (stack.Any())
-                {
-                    maybeVisit(visitor, stack.Pop());
-                }
-            }
-
-            /**
-             * @return Whether m1 ends before m2 starts.
-             */
-            private bool isOverlapped(Mapping m1, Mapping m2)
-            {
-                var l1 = m1.endPosition.Line;
-                var l2 = m2.startPosition.Line;
-                var c1 = m1.endPosition.Column;
-                var c2 = m2.startPosition.Column;
-
-                return (l1 == l2 && c1 >= c2) || l1 > l2;
-            }
-
-            /**
-             * Write any needed entries from the current position to the end of the
-             * provided mapping.
-             */
-            private void maybeVisit(MappingVisitor v, Mapping m)
-            {
-                maybeVisitParent(v, m, m);
-            }
-
-            /**
-             * Write any needed entries to complete the provided mapping.
-             */
-            private void maybeVisitParent(MappingVisitor v, Mapping parent, Mapping m)
-            {
-                if (parent == null) return;
-                if (v == null) throw new ArgumentNullException(nameof(v));
-                if (m == null) throw new ArgumentNullException(nameof(m));
-
-                var nextPos = m.startPosition.Prefix(_parent._prefixPosition);
-
-                // If the previous value is null, no mapping exists.
-                Preconditions.checkState(_previousPosition.Line < nextPos.Line || _previousPosition.Column <= nextPos.Column);
-                if (_previousPosition.Line < nextPos.Line || (_previousPosition.Line == nextPos.Line && _previousPosition.Column < nextPos.Column))
-                {
-                    visit(v, parent, nextPos);
-                }
-            }
-
-            /**
-             * Write any entries needed between the current position the next position
-             * and update the current position.
-             */
-            private void visit(MappingVisitor v, Mapping m, FilePosition nextPos)
-            {
-                Preconditions.checkState(_previousPosition.Line <= nextPos.Line);
-                Preconditions.checkState(_previousPosition.Line < nextPos.Line || _previousPosition.Column < nextPos.Column);
-
-                if (_previousPosition.Line == nextPos.Line && _previousPosition.Column == nextPos.Column)
-                {
-                    // Nothing to do.
-                    throw new InvalidOperationException();
-                }
-
-                v(m, _previousPosition, nextPos);
-
-                _previousPosition = nextPos;
             }
         }
 
