@@ -335,7 +335,13 @@ namespace NSourceMap
             // Append the line mapping entries.
             public void Traverse(MappingVisitor visitor)
             {
-                foreach (var m in _parent._mappings)
+                foreach (var m in _parent._mappings
+                    .OrderBy(x => x.startPosition.Line)
+                    .ThenBy(x => x.startPosition.Column)
+                    .ThenBy(x => x.sourceFile)
+                    .ThenBy(x => x.originalPosition.Line)
+                    .ThenBy(x => x.originalPosition.Column)
+                    .ThenBy(x => x.symbolName))
                 {
                     visitor(m, m.startPosition);
                 }

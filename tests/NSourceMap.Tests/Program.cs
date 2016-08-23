@@ -10,7 +10,7 @@ namespace NSourceMap.Tests
         public static void Main(params string[] args)
         {
             //System.Diagnostics.Debugger.Launch();
-            new SourceMapConsumerTest().SimpleGeneratorTest();
+            new SourceMapTest().SimpleGeneratorTest();
         }
     }
 }
