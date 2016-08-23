@@ -58,10 +58,10 @@ namespace NSourceMap.Tests
         {
             var generator = new SourceMapGenerator();
             var stdin = "<stdin>";
-            generator.AddMapping(stdin, new FilePosition(0, 0), new FilePosition(0, 0), new FilePosition(1, 0));
-            generator.AddMapping(stdin, new FilePosition(0, 1), new FilePosition(1, 0), new FilePosition(1, 3));
-            generator.AddMapping(stdin, new FilePosition(0, 2), new FilePosition(1, 3), new FilePosition(2, 0));
-            generator.AddMapping(stdin, new FilePosition(0, 3), new FilePosition(2, 0), new FilePosition(3, 0));
+            generator.AddMapping(stdin, new FilePosition(0, 0), new FilePosition(0, 0));
+            generator.AddMapping(stdin, new FilePosition(0, 1), new FilePosition(1, 0));
+            generator.AddMapping(stdin, new FilePosition(0, 2), new FilePosition(1, 3));
+            generator.AddMapping(stdin, new FilePosition(0, 3), new FilePosition(2, 0));
             
             var map = generator.Generate();
 

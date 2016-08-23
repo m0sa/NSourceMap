@@ -26,8 +26,6 @@ namespace NSourceMap
 
         private int _lastSourceFileIndex = UNMAPPED;
 
-        // For validation store the last mapping added.
-        private Mapping _lastMapping;
 
         /**
          * The position that the current source map is offset in the
@@ -51,7 +49,6 @@ namespace NSourceMap
         public void Reset()
         {
             _mappings.Clear();
-            _lastMapping = null;
             _sourceFileMap.Clear();
             _sourceFileContentMap.Clear();
             _originalNameMap.Clear();
@@ -115,7 +112,7 @@ namespace NSourceMap
         public void AddMapping(
             string sourceName,
             FilePosition sourceStartPosition,
-            FilePosition startPosition, FilePosition endPosition, string symbolName = null)
+            FilePosition startPosition, string symbolName = null)
         {
 
             // Don't bother if there is not sufficient information to be useful.
@@ -125,7 +122,6 @@ namespace NSourceMap
             }
 
             var adjustedStart = startPosition;
-            var adjustedEnd = endPosition;
 
             if (_offsetPosition.Line != 0
                 || _offsetPosition.Column != 0)
@@ -143,18 +139,9 @@ namespace NSourceMap
                     startOffsetPosition = 0;
                 }
 
-                if (endPosition.Line > 0)
-                {
-                    endOffsetPosition = 0;
-                }
-
                 adjustedStart = new FilePosition(
                     startPosition.Line + offsetLine,
                     startPosition.Column + startOffsetPosition);
-
-                adjustedEnd = new FilePosition(
-                    endPosition.Line + offsetLine,
-                    endPosition.Column + endOffsetPosition);
             }
 
             // Create the new mapping.
@@ -164,23 +151,8 @@ namespace NSourceMap
                 originalPosition = sourceStartPosition,
                 symbolName = symbolName,
                 startPosition = adjustedStart,
-                // endPosition = adjustedEnd
             };
 
-            // Validate the mappings are in a proper order.
-            if (_lastMapping != null)
-            {
-                var lastLine = _lastMapping.startPosition.Line;
-                var lastColumn = _lastMapping.startPosition.Column;
-                var nextLine = mapping.startPosition.Line;
-                var nextColumn = mapping.startPosition.Column;
-                Preconditions.checkState(nextLine > lastLine
-                    || (nextLine == lastLine && nextColumn >= lastColumn),
-                    "Incorrect source mappings order, previous : ({0},{1})\nnew : ({2},{3})",
-                    lastLine, lastColumn, nextLine, nextColumn);
-            }
-
-            _lastMapping = mapping;
             _mappings.Add(mapping);
         }
 
