@@ -248,13 +248,13 @@ namespace NSourceMap
 
             // The destination.
             var previousLine = UNMAPPED;
-            var previousColumn = 0;
+            var previousColumn = UNMAPPED;
 
             // Previous values used for storing relative ids.
-            var previousSourceFileId = UNMAPPED;
-            var previousSourceLine = UNMAPPED;
-            var previousSourceColumn = UNMAPPED;
-            var previousNameId = UNMAPPED;
+            var previousSourceFileId = 0;
+            var previousSourceLine = 0;
+            var previousSourceColumn = 0;
+            var previousNameId = 0;
 
             var maxLine = 0;
             // Mark any unused mappings.
@@ -366,6 +366,7 @@ namespace NSourceMap
             public MappingTraversal(SourceMapGenerator parent)
             {
                 _parent = parent;
+                _previousPosition = new FilePosition(0, 0);
             }
 
             // Append the line mapping entries.
@@ -427,8 +428,11 @@ namespace NSourceMap
              * Write any needed entries to complete the provided mapping.
              */
             private void maybeVisitParent(MappingVisitor v, Mapping parent, Mapping m)
-
             {
+                if (parent == null) return;
+                if (v == null) throw new ArgumentNullException(nameof(v));
+                if (m == null) throw new ArgumentNullException(nameof(m));
+
                 var nextPos = m.startPosition.Prefix(_parent._prefixPosition);
 
                 // If the previous value is null, no mapping exists.
@@ -467,8 +471,8 @@ namespace NSourceMap
 
             if (!_sourceFileMap.TryGetValue(sourceName, out _lastSourceFileIndex))
             {
-                _sourceFileMap.Add(sourceName, _sourceFileMap.Count);
                 _lastSourceFileIndex = _sourceFileMap.Count;
+                _sourceFileMap.Add(sourceName, _sourceFileMap.Count);
             }
             return _lastSourceFileIndex;
         }
