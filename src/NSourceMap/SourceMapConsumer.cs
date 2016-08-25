@@ -14,10 +14,11 @@ namespace NSourceMap
         private List<List<Entry>> _lines;
         private string[] _names;
 
-
         private string[] _sources;
 
         public string SourceRoot { get; private set; }
+
+        private List<Mapping> _mappings;
 
         public void Parse(string contents)
         {
@@ -32,7 +33,7 @@ namespace NSourceMap
             }
         }
 
-        public OriginalMapping GetMappingForLine(FilePosition pos)
+        public Mapping GetMappingForLine(FilePosition pos)
         {
             var lineNumber = pos.Line;
             var column = pos.Column;
@@ -60,11 +61,11 @@ namespace NSourceMap
 
             var index = Search(entries, column, 0, entries.Count - 1);
             Preconditions.checkState(index >= 0, "unexpected:{0}", index);
-            return GetOriginalMappingForEntry(entries[index]);
+            return GetOriginalMappingForEntry(entries[index], lineNumber);
         }
         
         // originalFile path ==> original line ==> target mappings 
-        private Dictionary<string, Dictionary<int, List<OriginalMapping>>> _reverseSourceMapping;
+        private Dictionary<string, Dictionary<int, List<Mapping>>> _reverseSourceMapping;
 
         public ICollection<string> OriginalSources => _sources.ToArray();
 
@@ -78,7 +79,7 @@ namespace NSourceMap
         /// <param name="line">the source line</param>
         /// <param name="column">the source column</param>
         /// <returns>the reverse mapping (source → target)</returns>
-        public ICollection<OriginalMapping> GetReverseMapping(string originalFile, FilePosition position)
+        public ICollection<Mapping> GetReverseMapping(string originalFile, FilePosition position)
         {
             // TODO(user): This implementation currently does not make use of the column parameter.
             // Synchronization needs to be handled by callers.
@@ -87,8 +88,8 @@ namespace NSourceMap
                 _reverseSourceMapping = CreateReverseMapping();
             }
 
-            Dictionary<int, List<OriginalMapping>> sourceLineToCollectionMap;
-            List<OriginalMapping> mappings;
+            Dictionary<int, List<Mapping>> sourceLineToCollectionMap;
+            List<Mapping> mappings;
 
 
             if (_reverseSourceMapping.TryGetValue(originalFile, out sourceLineToCollectionMap) &&
@@ -96,7 +97,7 @@ namespace NSourceMap
             {
                 return mappings;
             }
-            return new OriginalMapping[0];
+            return new Mapping[0];
         }
 
         private void Parse(SourceMapObject sourceMapObject)
@@ -117,6 +118,7 @@ namespace NSourceMap
             _names = sourceMapObject.names;
 
             _lines = _lineCount >= 0 ? new List<List<Entry>>(_lineCount) : new List<List<Entry>>();
+            _mappings = new List<Mapping>();
 
             new MappingBuilder(this, sourceMapObject.mappings).Build();
         }
@@ -164,7 +166,7 @@ namespace NSourceMap
         /// <summary>
         /// Returns the mapping entry that proceeds the supplied line or null if no such entry exists.
         /// </summary>
-        private OriginalMapping GetPreviousMapping(int lineNumber)
+        private Mapping GetPreviousMapping(int lineNumber)
         {
             do
             {
@@ -175,21 +177,21 @@ namespace NSourceMap
                 lineNumber--;
             } while (_lines[lineNumber] == null);
             var entries = _lines[lineNumber];
-            return GetOriginalMappingForEntry(entries.Last());
+            return GetOriginalMappingForEntry(entries.Last(), lineNumber);
         }
 
-        private OriginalMapping GetOriginalMappingForEntry(Entry entry) =>
+        private Mapping GetOriginalMappingForEntry(Entry entry, int generatedLine) =>
             entry.SourceFileId == UNMAPPED
                 ? null
-                : new OriginalMapping(_sources[entry.SourceFileId], entry.SourceLine, entry.SourceColumn, entry.NameId == UNMAPPED ? null : _names[entry.NameId]);
+                : new Mapping(_sources[entry.SourceFileId], new FilePosition(entry.SourceLine, entry.SourceColumn), new FilePosition(generatedLine, entry.GeneratedColumn), entry.NameId == UNMAPPED ? null : _names[entry.NameId]);
 
         /// <summary>
         /// Reverse the source map; the created mapping will allow us to quickly go 
         /// from a source file and line number to a collection of target OriginalMappings.
         /// </summary>
-        private Dictionary<string, Dictionary<int, List<OriginalMapping>>> CreateReverseMapping()
+        private Dictionary<string, Dictionary<int, List<Mapping>>> CreateReverseMapping()
         {
-            var result = new Dictionary<string, Dictionary<int, List<OriginalMapping>>>();
+            var result = new Dictionary<string, Dictionary<int, List<Mapping>>>();
 
             for (var targetLine = 0; targetLine < _lines.Count; targetLine++)
             {
@@ -205,7 +207,7 @@ namespace NSourceMap
 
                     if (!result.ContainsKey(originalFile))
                     {
-                        result.Add(originalFile, new Dictionary<int, List<OriginalMapping>>());
+                        result.Add(originalFile, new Dictionary<int, List<Mapping>>());
                     }
 
                     var lineToCollectionMap = result[originalFile];
@@ -214,54 +216,18 @@ namespace NSourceMap
 
                     if (!lineToCollectionMap.ContainsKey(sourceLine))
                     {
-                        lineToCollectionMap.Add(sourceLine, new List<OriginalMapping>(1));
+                        lineToCollectionMap.Add(sourceLine, new List<Mapping>(1));
                     }
 
                     var mappings = lineToCollectionMap[sourceLine];
 
-                    mappings.Add(new OriginalMapping(lineNumber: targetLine, columnPosition: entry.GeneratedColumn));
+                    mappings.Add(GetOriginalMappingForEntry(entry, targetLine));
                 }
             }
             return result;
         }
-
-        public IEnumerable<Mapping> Mappings 
-        { 
-            get
-            {
-                var pending = false;
-                string sourceName = null;
-                string symbolName = null;
-                FilePosition sourceStartPosition = null;
-                FilePosition startPosition = null;
-
-                var lineCount = _lines.Count;
-                for (var i = 0; i < lineCount; i++)
-                {
-                    var line = _lines[i];
-                    if (line == null) continue;
-
-                    var entryCount = line.Count;
-                    for (var j = 0; j < entryCount; j++)
-                    {
-                        var entry = line[j];
-                        if (pending)
-                        {
-                            var endPosition = new FilePosition(i, entry.GeneratedColumn);
-                            yield return new Mapping(sourceName, sourceStartPosition, startPosition, symbolName, endPosition);
-                            pending = false;
-                        }
-
-                        if (entry.SourceFileId == UNMAPPED) continue;
-                        pending = true;
-                        sourceName = _sources[entry.SourceFileId];
-                        symbolName = entry.NameId != UNMAPPED ? _names[entry.NameId] : null;
-                        sourceStartPosition = new FilePosition(entry.SourceLine, entry.SourceColumn);
-                        startPosition = new FilePosition(i, entry.GeneratedColumn);
-                    }
-                }
-            }
-        }
+        
+        public IEnumerable<Mapping> Mappings => _mappings; // _lines.SelectMany((entries, line) => entries?.Select(entry => GetOriginalMappingForEntry(entry, line)) ?? Enumerable.Empty<Mapping>());
 
         private class MappingBuilder
         {
@@ -328,6 +294,7 @@ namespace NSourceMap
                 // null if the _line is empty.
                 if (entries.Any())
                 {
+                    _parent._mappings.AddRange(entries.Select(x => _parent.GetOriginalMappingForEntry(x, _parent._lines.Count)));
                     _parent._lines.Add(entries.ToList());
                     entries.Clear(); // empty list for the next _line.
                 }

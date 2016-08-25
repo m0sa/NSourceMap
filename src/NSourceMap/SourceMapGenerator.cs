@@ -235,6 +235,8 @@ namespace NSourceMap
                                 Base64VLQ.VLQEncode(nameId - previousNameId, mappingsBuilder);
                                 previousNameId = nameId;
                             }
+                        } else {
+
                         }
 
                         previousLine = current.Line;

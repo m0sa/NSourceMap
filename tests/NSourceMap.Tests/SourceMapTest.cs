@@ -55,19 +55,23 @@ namespace NSourceMap.Tests
             var consumer = new SourceMapConsumer();
             consumer.Parse(SimpleSourceMap);
 
-            OriginalMapping mapping;
+            Mapping mapping;
 
             mapping = consumer.GetMappingForLine(new FilePosition(1, 3)); // semicolon on line 2
-            Assert.Equal(0, mapping.LineNumber);
-            Assert.Equal(2, mapping.ColumnPosition);
+            Assert.Equal(0, mapping.Original.Line);
+            Assert.Equal(2, mapping.Original.Column);
             
             mapping = consumer.GetMappingForLine(new FilePosition(4, 8)); // the true in if(true)
-            Assert.Equal(0, mapping.LineNumber);
-            Assert.Equal(10, mapping.ColumnPosition);
-
+            Assert.Equal(0, mapping.Original.Line);
+            Assert.Equal(10, mapping.Original.Column);
+            
             mapping = consumer.GetMappingForLine(new FilePosition(7, 8)); // the false in if(false)
-            Assert.Equal(0, mapping.LineNumber);
-            Assert.Equal(27, mapping.ColumnPosition);
+            Assert.Equal(0, mapping.Original.Line);
+            Assert.Equal(27, mapping.Original.Column);
+
+            mapping = consumer.GetMappingForLine(new FilePosition(13, 1)); // the last semicolon on line 14
+            Assert.Equal(0, mapping.Original.Line);
+            Assert.Equal(47, mapping.Original.Column);
         }
 
         [Fact]
@@ -89,7 +93,7 @@ namespace NSourceMap.Tests
         public void DecodeEncodeTest() 
         {
             var consumer = new SourceMapConsumer();
-            consumer.Parse(SimpleSourceMap.Replace("AAAA;AAAC,GAAC", "AAAA;;AAAC,GAAC;"));
+            consumer.Parse(SimpleSourceMap);
 
             var generator = new SourceMapGenerator();
             foreach(var m in consumer.Mappings)
@@ -98,7 +102,7 @@ namespace NSourceMap.Tests
             }
             var map = generator.Generate();
 
-            Assert.Contains("AAAA;;AAAC,GAAC;;AAAC,GAAC;AAAC,GAAC;AAAC,MAAG,IAAI,EAAC;OAAG;AAAC,SAAK;QAAG,KAAK,EAAC;SAAG;AAAC,WAAK;SAAG;AAAC;;CAAC", map.mappings);
+            Assert.Contains("AAAA;AAAC,GAAC;AAAC,GAAC;AAAC,GAAC;AAAC,MAAG,IAAI,EAAC;OAAG;AAAC,SAAK;QAAG,KAAK,EAAC;SAAG;AAAC,WAAK;SAAG;AAAC;;CAAC", map.mappings);
         }
     }
 }
