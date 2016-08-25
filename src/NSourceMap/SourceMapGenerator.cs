@@ -13,19 +13,11 @@ namespace NSourceMap
         /// <summary>A pre-order traversal ordered list of mappings stored in this map.</summary>
         private readonly List<Mapping> _mappings = new List<Mapping>();
 
-        /// <summary>A map of source names to source name index</summary>
-        private readonly Dictionary<string, int> _sourceFileMap = new Dictionary<string, int>();
-
-        /// <summary>A map of source names to source file contents</summary>
         private readonly Dictionary<string, string> _sourceFileContentMap = new Dictionary<string, string>();
 
-        /// <summary>A map of source names to source name index</summary> 
-        private readonly Dictionary<string, int> _originalNameMap = new Dictionary<string, int>();
+        private readonly StringIndex _sourceFileMap = new StringIndex();
 
-        private string _lastSourceFile;
-
-        private int _lastSourceFileIndex = UNMAPPED;
-
+        private readonly StringIndex _nameMap = new StringIndex();
 
         /**
          * The position that the current source map is offset in the
@@ -49,11 +41,9 @@ namespace NSourceMap
         public void Reset()
         {
             _mappings.Clear();
-            _sourceFileMap.Clear();
             _sourceFileContentMap.Clear();
-            _originalNameMap.Clear();
-            _lastSourceFile = null;
-            _lastSourceFileIndex = UNMAPPED;
+            _sourceFileMap.Clear();
+            _nameMap.Clear();
             _offsetPosition = new FilePosition(0, 0);
             _prefixPosition = new FilePosition(0, 0);
         }
@@ -104,16 +94,11 @@ namespace NSourceMap
             _offsetPosition = new FilePosition(offsetLine, offsetIndex);
         }
 
-        /**
-         * Adds a mapping for the given node.  Mappings must be added in order.
-         * @param startPosition The position on the starting line
-         * @param endPosition The position on the ending line.
-         */
-        public void AddMapping(
-            string sourceName,
-            FilePosition sourceStartPosition,
-            FilePosition startPosition, string symbolName = null)
+        /// <summary>Adds a mapping for the given node.  Mappings must be added in order.///
+        public void AddMapping (Mapping m)
         {
+            var sourceName = m.Source;
+            var sourceStartPosition = m.Original;
 
             // Don't bother if there is not sufficient information to be useful.
             if (sourceName == null || sourceStartPosition.Line < 0)
@@ -121,6 +106,7 @@ namespace NSourceMap
                 return;
             }
 
+            var startPosition = m.Generated;
             var adjustedStart = startPosition;
 
             if (_offsetPosition.Line != 0
@@ -145,13 +131,7 @@ namespace NSourceMap
             }
 
             // Create the new mapping.
-            var mapping = new Mapping
-            {
-                sourceFile = sourceName,
-                originalPosition = sourceStartPosition,
-                symbolName = symbolName,
-                startPosition = adjustedStart,
-            };
+            var mapping = new Mapping(sourceName, sourceStartPosition, adjustedStart, m.Name);
 
             _mappings.Add(mapping);
         }
@@ -161,34 +141,6 @@ namespace NSourceMap
             _sourceFileContentMap.Add(source, content);
         }
 
-        /**
-         * Writes out the source map in the following format (line numbers are for
-         * reference only and are not part of the format):
-         *
-         * 1.  {
-         * 2.    version: 3,
-         * 3.    file: "out.js",
-         * 4.    lineCount: 2,
-         * 5.    sourceRoot: "",
-         * 6.    sources: ["foo.js", "bar.js"],
-         * 7.    names: ["src", "maps", "are", "fun"],
-         * 8.    mappings: "a;;abcde,abcd,a;"
-         * 9.    x_org_extension: value
-         * 10. }
-         *
-         * Line 1: The entire file is a single JSON object
-         * Line 2: File revision (always the first entry in the object)
-         * Line 3: The name of the file that this source map is associated with.
-         * Line 4: The number of lines represented in the source map.
-         * Line 5: An optional source root, useful for relocating source files on a
-         *     server or removing repeated prefix values in the "sources" entry.
-         * Line 6: A list of sources used by the "mappings" entry relative to the
-         *     sourceRoot.
-         * Line 7: A list of symbol names used by the "mapping" entry.  This list
-         *     may be incomplete.
-         * Line 8: The mappings field.
-         * Line 9: Any custom field (extension).
-         */
         public SourceMapObject Generate()
         {
             int lineCount;
@@ -201,14 +153,14 @@ namespace NSourceMap
                     file = File,
                     lineCount = lineCount,
                     sourceRoot = SourceRoot,
-                    sources = _sourceFileMap.OrderBy(x => x.Value).Select(x => x.Key).ToArray(),
+                    sources = _sourceFileMap.Items.ToArray(),
                     mappings = mappings,
-                    sourcesContent = _sourceFileMap.OrderBy(x => x.Value).Select(x =>
+                    sourcesContent = _sourceFileMap.Items.Select(x =>
                     {
                         string src;
-                        return _sourceFileContentMap.TryGetValue(x.Key, out src) ? src : null;
+                        return _sourceFileContentMap.TryGetValue(x, out src) ? src : null;
                     }).ToArray(),
-                    names = _originalNameMap.OrderBy(x => x.Value).Select(x => x.Key).ToArray(),
+                    names = _nameMap.Items.ToArray(),
                 };
         }
 
@@ -228,17 +180,15 @@ namespace NSourceMap
             var previousSourceColumn = 0;
             var previousNameId = 0;
 
-            var maxLine = 0;
             // Mark any unused mappings.
-            new MappingTraversal(this).Traverse((m, start) => maxLine = Math.Max(maxLine, (m.startPosition?.Line ?? 0) + 1));
+            var maxLine = Mappings(sort: false).Max(x => x.Generated?.Line ?? 0);
 
             // Adjust for the prefix.
             lineCount = maxLine + _prefixPosition.Line + 1;
 
-
-            new MappingTraversal(this).Traverse((m, current) =>
-
+            foreach(var m in Mappings(sort: true))
             {
+                var current = m.Generated;
                 if (previousLine != current.Line)
                 {
                     previousColumn = 0;
@@ -251,7 +201,7 @@ namespace NSourceMap
                         mappingsBuilder.Append(";"); // close line
                     }
 
-                    if (current.Line < maxLine)
+                    if (current.Line < lineCount)
                     {
                         if (previousLine == current.Line)
                         {
@@ -265,23 +215,23 @@ namespace NSourceMap
                         if (m != null)
                         {
                             // The relative source file id
-                            var sourceId = GetSourceId(m.sourceFile);
+                            var sourceId = _sourceFileMap.IndexFor(m.Source);
                             Base64VLQ.VLQEncode(sourceId - previousSourceFileId, mappingsBuilder);
                             previousSourceFileId = sourceId;
 
                             // The relative source file line and column
-                            var srcline = m.originalPosition.Line;
-                            var srcColumn = m.originalPosition.Column;
+                            var srcline = m.Original.Line;
+                            var srcColumn = m.Original.Column;
                             Base64VLQ.VLQEncode(srcline - previousSourceLine, mappingsBuilder);
                             previousSourceLine = srcline;
 
                             Base64VLQ.VLQEncode(srcColumn - previousSourceColumn, mappingsBuilder);
                             previousSourceColumn = srcColumn;
 
-                            if (m.symbolName != null)
+                            if (m.Name != null)
                             {
                                 // The relative id for the associated symbol name
-                                var nameId = GetNameId(m.symbolName);
+                                var nameId = _nameMap.IndexFor(m.Name);
                                 Base64VLQ.VLQEncode(nameId - previousNameId, mappingsBuilder);
                                 previousNameId = nameId;
                             }
@@ -297,81 +247,90 @@ namespace NSourceMap
                 } else {
 
                 }
+            }
 
-            });
             mappingsBuilder.Append(";");
             var mappings = mappingsBuilder.ToString();
             return mappings;
         }
 
-        /**
-         * A mapping from a given position in an input source file to a given position
-         * in the generated code.
-         */
-        class Mapping
+        private class StringIndex
         {
-            public string sourceFile;
-            public FilePosition originalPosition;
-            public FilePosition startPosition;
-            public string symbolName;
-            public bool used;
-        }
+            private string _lastString = null;
+            private int _lastIndex = UNMAPPED;
 
-        private delegate void MappingVisitor(Mapping m, FilePosition start);
+            private readonly Dictionary<string, int> _mappingsLookup = new Dictionary<string, int>();
 
-        /**
-         * Walk the mappings and visit each segment of the _mappings, unmapped
-         * segments are visited with a null mapping, unused mapping are not visited.
-         */
-        private class MappingTraversal
-        {
-            private readonly SourceMapGenerator _parent;
+            private readonly List<string> _mappingsOrdered = new List<string>();
 
-            public MappingTraversal(SourceMapGenerator parent)
+            public int IndexFor(string name)
             {
-                _parent = parent;
-            }
+                if (name == _lastString) return _lastIndex;
 
-            // Append the line mapping entries.
-            public void Traverse(MappingVisitor visitor)
-            {
-                foreach (var m in _parent._mappings
-                    .OrderBy(x => x.startPosition.Line)
-                    .ThenBy(x => x.startPosition.Column)
-                    .ThenBy(x => x.sourceFile)
-                    .ThenBy(x => x.originalPosition.Line)
-                    .ThenBy(x => x.originalPosition.Column)
-                    .ThenBy(x => x.symbolName))
+                int newIndex;
+                if (!_mappingsLookup.TryGetValue(name, out newIndex))
                 {
-                    visitor(m, m.startPosition);
+                    newIndex = _mappingsLookup.Count;
+                    _mappingsLookup.Add(name, newIndex);
+                    _mappingsOrdered.Add(name);
                 }
+
+                _lastString = name;
+                _lastIndex = newIndex;
+
+                return newIndex;
             }
-        }
 
-        private int GetSourceId(string sourceName)
-        {
-            if (sourceName == _lastSourceFile) return _lastSourceFileIndex;
-            _lastSourceFile = sourceName;
+            public IEnumerable<string> Items => _mappingsOrdered.AsEnumerable();
 
-            if (!_sourceFileMap.TryGetValue(sourceName, out _lastSourceFileIndex))
+            public void Clear()
             {
-                _lastSourceFileIndex = _sourceFileMap.Count;
-                _sourceFileMap.Add(sourceName, _sourceFileMap.Count);
+                _mappingsLookup.Clear();
+                _mappingsOrdered.Clear();
             }
-            return _lastSourceFileIndex;
         }
 
-        private int GetNameId(string symbolName)
+        public IEnumerable<Mapping> Mappings(bool sort = false)
         {
-            int originalNameIndex;
-
-            if (!_originalNameMap.TryGetValue(symbolName, out originalNameIndex))
+            var result = _mappings.AsEnumerable();
+            if (sort)
             {
-                originalNameIndex = _originalNameMap.Count;
-                _originalNameMap.Add(symbolName, originalNameIndex);
+                result = result
+                    .OrderBy(x => x.Generated.Line)
+                    .ThenBy(x => x.Generated.Column)
+                    .ThenBy(x => x.Source)
+                    .ThenBy(x => x.Original.Line)
+                    .ThenBy(x => x.Original.Column)
+                    .ThenBy(x => x.Name);
             }
-            return originalNameIndex;
+            return result;
+        }
+    }
+    
+    public class Mapping
+    {
+        public Mapping(string source, FilePosition original, FilePosition generated, string name = null, FilePosition generatedEnd = null)
+        {
+            Source = source;
+            Original = original;
+            Generated = generated;
+            Name = name;
+            GeneratedEnd = generatedEnd;
         }
 
+        /// <summary>The original source file (relative to the sourceRoot).</summary>
+        public string Source { get; }
+
+        /// <summary>An object with the original line and column positions.</summary>
+        public FilePosition Original { get; }
+
+        /// <summary>An object with the generated line and column positions.</summary>
+        public FilePosition Generated { get; }
+
+        /// <summary>An object with the generated line and column positions.</summary>
+        public FilePosition GeneratedEnd { get; }
+
+        /// <summary>An optional original token name for this mapping.</summary>
+        public string Name { get; }
     }
 }

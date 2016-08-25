@@ -11,7 +11,7 @@ namespace NSourceMap
         private int _lineCount;
 
         // Slots in the _lines list will be null if the line does not have any entries.
-        private List<List<IEntry>> _lines;
+        private List<List<Entry>> _lines;
         private string[] _names;
 
 
@@ -107,7 +107,7 @@ namespace NSourceMap
             _sources = sourceMapObject.sources;
             _names = sourceMapObject.names;
 
-            _lines = _lineCount >= 0 ? new List<List<IEntry>>(_lineCount) : new List<List<IEntry>>();
+            _lines = _lineCount >= 0 ? new List<List<Entry>>(_lineCount) : new List<List<Entry>>();
 
             new MappingBuilder(this, sourceMapObject.mappings).Build();
         }
@@ -115,12 +115,12 @@ namespace NSourceMap
         /// <summary>
         /// Perform a binary search on the array to find a section that covers the target column.
         /// </summary>
-        private static int Search(List<IEntry> entries, int target, int start, int end)
+        private static int Search(List<Entry> entries, int target, int start, int end)
         {
             while (true)
             {
                 var mid = (end - start)/2 + start;
-                var compare = CompareEntry(entries, mid, target);
+                var compare = entries[mid].GeneratedColumn - target;
                 if (compare == 0)
                 {
                     return mid;
@@ -149,10 +149,8 @@ namespace NSourceMap
         /// <summary>
         /// Compare an array entry's column value to the target column value.
         /// </summary>
-        private static int CompareEntry(List<IEntry> entries, int entry, int target)
-        {
-            return entries[entry].GeneratedColumn - target;
-        }
+        private static int CompareEntry(List<Entry> entries, int entry, int target) =>
+            entries[entry].GeneratedColumn - target;
 
         /// <summary>
         /// Returns the mapping entry that proceeds the supplied line or null if no such entry exists.
@@ -171,7 +169,7 @@ namespace NSourceMap
             return GetOriginalMappingForEntry(entries.Last());
         }
 
-        private OriginalMapping GetOriginalMappingForEntry(IEntry entry)
+        private OriginalMapping GetOriginalMappingForEntry(Entry entry)
         {
             if (entry.SourceFileId == UNMAPPED)
             {
@@ -235,37 +233,40 @@ namespace NSourceMap
             return result;
         }
 
-        public void VisitMappings(EntryVisitor visitor)
-        {
-            var pending = false;
-            string sourceName = null;
-            string symbolName = null;
-            FilePosition sourceStartPosition = null;
-            FilePosition startPosition = null;
-
-            var lineCount = _lines.Count;
-            for (var i = 0; i < lineCount; i++)
+        public IEnumerable<Mapping> Mappings 
+        { 
+            get
             {
-                var line = _lines[i];
-                if (line == null) continue;
+                var pending = false;
+                string sourceName = null;
+                string symbolName = null;
+                FilePosition sourceStartPosition = null;
+                FilePosition startPosition = null;
 
-                var entryCount = line.Count;
-                for (var j = 0; j < entryCount; j++)
+                var lineCount = _lines.Count;
+                for (var i = 0; i < lineCount; i++)
                 {
-                    var entry = line[j];
-                    if (pending)
-                    {
-                        var endPosition = new FilePosition(i, entry.GeneratedColumn);
-                        visitor(sourceName, symbolName, sourceStartPosition, startPosition, endPosition);
-                        pending = false;
-                    }
+                    var line = _lines[i];
+                    if (line == null) continue;
 
-                    if (entry.SourceFileId == UNMAPPED) continue;
-                    pending = true;
-                    sourceName = _sources[entry.SourceFileId];
-                    symbolName = entry.NameId != UNMAPPED ? _names[entry.NameId] : null;
-                    sourceStartPosition = new FilePosition(entry.SourceLine, entry.SourceColumn);
-                    startPosition = new FilePosition(i, entry.GeneratedColumn);
+                    var entryCount = line.Count;
+                    for (var j = 0; j < entryCount; j++)
+                    {
+                        var entry = line[j];
+                        if (pending)
+                        {
+                            var endPosition = new FilePosition(i, entry.GeneratedColumn);
+                            yield return new Mapping(sourceName, sourceStartPosition, startPosition, symbolName, endPosition);
+                            pending = false;
+                        }
+
+                        if (entry.SourceFileId == UNMAPPED) continue;
+                        pending = true;
+                        sourceName = _sources[entry.SourceFileId];
+                        symbolName = entry.NameId != UNMAPPED ? _names[entry.NameId] : null;
+                        sourceStartPosition = new FilePosition(entry.SourceLine, entry.SourceColumn);
+                        startPosition = new FilePosition(i, entry.GeneratedColumn);
+                    }
                 }
             }
         }
@@ -291,7 +292,7 @@ namespace NSourceMap
 
             public void Build()
             {
-                var entries = new List<IEntry>();
+                var entries = new List<Entry>();
                 var temp = new List<int>(MAX_ENTRY_VALUES);
                 for (var i = 0; i < _lineMap.Length;)
                 {
@@ -329,7 +330,7 @@ namespace NSourceMap
                 }
             }
 
-            private void CompleteLine(List<IEntry> entries)
+            private void CompleteLine(List<Entry> entries)
             {
                 // The _line is complete, store the result for the _line,
                 // null if the _line is empty.
@@ -346,19 +347,17 @@ namespace NSourceMap
                 _previousCol = 0;
             }
 
-            private void ValidateEntry(IEntry entry)
+            private void ValidateEntry(Entry entry)
             {
                 Preconditions.checkState((_parent._lineCount < 0) || (_line < _parent._lineCount), "_line={0}, _lineCount={1}",
                     _line, _parent._lineCount);
-                Preconditions.checkState(entry.SourceFileId == UNMAPPED
-                                         || entry.SourceFileId < _parent._sources.Length);
-                Preconditions.checkState(entry.NameId == UNMAPPED
-                                         || entry.NameId < _parent._names.Length);
+                Preconditions.checkState(entry.SourceFileId == UNMAPPED || entry.SourceFileId < _parent._sources.Length);
+                Preconditions.checkState(entry.NameId == UNMAPPED || entry.NameId < _parent._names.Length);
             }
 
-            private IEntry DecodeEntry(List<int> vals)
+            private Entry DecodeEntry(List<int> vals)
             {
-                IEntry entry;
+                Entry entry;
                 var entryValues = vals.Count;
                 switch (entryValues)
                 {
@@ -375,7 +374,7 @@ namespace NSourceMap
 
                     case 1:
                         // An unmapped section of the generated file.
-                        entry = new UnmappedEntry(
+                        entry = Entry.Unmapped(
                             vals[0] + _previousCol);
                         // Set the values see for the next entry.
                         _previousCol = entry.GeneratedColumn;
@@ -383,7 +382,7 @@ namespace NSourceMap
 
                     case 4:
                         // A mapped section of the generated file.
-                        entry = new UnnamedEntry(
+                        entry = Entry.Unnamed(
                             vals[0] + _previousCol,
                             vals[1] + _previousSrcId,
                             vals[2] + _previousSrcLine,
@@ -398,7 +397,7 @@ namespace NSourceMap
                     case 5:
                         // A mapped section of the generated file, that has an associated
                         // name.
-                        entry = new NamedEntry(
+                        entry = Entry.Named(
                             vals[0] + _previousCol,
                             vals[1] + _previousSrcId,
                             vals[2] + _previousSrcLine,
@@ -421,64 +420,26 @@ namespace NSourceMap
             }
         }
 
-        private interface IEntry
+        private struct Entry
         {
-            int GeneratedColumn { get; }
-            int SourceFileId { get; }
-            int SourceLine { get; }
-            int SourceColumn { get; }
-            int NameId { get; }
-        }
+            public int GeneratedColumn { get; }
+            public int SourceFileId { get; }
+            public int SourceLine { get; }
+            public int SourceColumn { get; }
+            public int NameId { get; }
 
-        private class UnmappedEntry : IEntry
-        {
-            public UnmappedEntry(int generatedColumn)
+            private Entry(int generatedColumn = UNMAPPED, int sourceFileId = UNMAPPED, int sourceLine = UNMAPPED, int sourceColumn = UNMAPPED, int nameId = UNMAPPED)
             {
                 GeneratedColumn = generatedColumn;
+                SourceFileId = sourceFileId;
+                SourceLine = sourceLine;
+                SourceColumn = sourceColumn;
+                NameId = nameId;
             }
 
-            public int GeneratedColumn { get; }
-
-            public virtual int SourceFileId => UNMAPPED;
-
-            public virtual int SourceLine => UNMAPPED;
-
-            public virtual int SourceColumn => UNMAPPED;
-
-            public virtual int NameId => UNMAPPED;
+            public static Entry Unmapped(int column) => new Entry(column);
+            public static Entry Unnamed(int column, int srcFile, int srcLine, int srcColumn) => new Entry(column, srcFile, srcLine, srcColumn);
+            public static Entry Named(int column, int srcFile, int srcLine, int srcColumn, int name) => new Entry(column, srcFile, srcLine, srcColumn, name);
         }
-
-        private class UnnamedEntry : UnmappedEntry
-        {
-            public UnnamedEntry(int column, int srcFile, int srcLine, int srcColumn) : base(column)
-            {
-                SourceFileId = srcFile;
-                SourceLine = srcLine;
-                SourceColumn = srcColumn;
-            }
-
-            public override int SourceFileId { get; }
-
-            public override int SourceLine { get; }
-
-            public override int SourceColumn { get; }
-        }
-
-        private class NamedEntry : UnnamedEntry
-        {
-            public NamedEntry(int column, int srcFile, int srcLine, int srcColumn, int name)
-                : base(column, srcFile, srcLine, srcColumn)
-            {
-                NameId = name;
-            }
-
-            public override int NameId { get; }
-        }
-
-        public delegate void EntryVisitor (string sourceName,
-                string symbolName,
-                FilePosition sourceStartPosition,
-                FilePosition startPosition,
-                FilePosition endPosition);
     }
 }
