@@ -57,17 +57,17 @@ namespace NSourceMap.Tests
 
             OriginalMapping mapping;
 
-            mapping = consumer.GetMappingForLine(2, 4); // semicolon on line 2
-            Assert.Equal(1, mapping.LineNumber);
-            Assert.Equal(3, mapping.ColumnPosition);
+            mapping = consumer.GetMappingForLine(new FilePosition(1, 3)); // semicolon on line 2
+            Assert.Equal(0, mapping.LineNumber);
+            Assert.Equal(2, mapping.ColumnPosition);
             
-            mapping = consumer.GetMappingForLine(5, 9); // the true in if(true)
-            Assert.Equal(1, mapping.LineNumber);
-            Assert.Equal(11, mapping.ColumnPosition);
+            mapping = consumer.GetMappingForLine(new FilePosition(4, 8)); // the true in if(true)
+            Assert.Equal(0, mapping.LineNumber);
+            Assert.Equal(10, mapping.ColumnPosition);
 
-            mapping = consumer.GetMappingForLine(8, 9); // the false in if(false)
-            Assert.Equal(1, mapping.LineNumber);
-            Assert.Equal(28, mapping.ColumnPosition);
+            mapping = consumer.GetMappingForLine(new FilePosition(7, 8)); // the false in if(false)
+            Assert.Equal(0, mapping.LineNumber);
+            Assert.Equal(27, mapping.ColumnPosition);
         }
 
         [Fact]

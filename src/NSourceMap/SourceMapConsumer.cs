@@ -6,7 +6,7 @@ using static NSourceMap.Constants;
     
 namespace NSourceMap
 {
-    public sealed class SourceMapConsumer : ISourceMapConsumer, ISourceMappingReversable
+    public sealed class SourceMapConsumer
     {
         private int _lineCount;
 
@@ -32,11 +32,10 @@ namespace NSourceMap
             }
         }
 
-        public OriginalMapping GetMappingForLine(int lineNumber, int column)
+        public OriginalMapping GetMappingForLine(FilePosition pos)
         {
-            // Normalize the line and column numbers to 0.
-            lineNumber--;
-            column--;
+            var lineNumber = pos.Line;
+            var column = pos.Column;
 
             if (lineNumber < 0 || lineNumber >= _lines.Count)
             {
@@ -69,7 +68,17 @@ namespace NSourceMap
 
         public ICollection<string> OriginalSources => _sources.ToArray();
 
-        public ICollection<OriginalMapping> GetReverseMapping(string originalFile, int line, int column)
+        /// <summary>
+        /// Given a source file, line, and column, return the reverse mapping (source → target).
+        /// A collection is returned as in some cases (like a function being inlined), one source line
+        /// may map to more then one target location. An empty collection is returned if there were
+        /// no matches.
+        /// </summary>
+        /// <param name="originalFile">the source file</param>
+        /// <param name="line">the source line</param>
+        /// <param name="column">the source column</param>
+        /// <returns>the reverse mapping (source → target)</returns>
+        public ICollection<OriginalMapping> GetReverseMapping(string originalFile, FilePosition position)
         {
             // TODO(user): This implementation currently does not make use of the column parameter.
             // Synchronization needs to be handled by callers.
@@ -83,7 +92,7 @@ namespace NSourceMap
 
 
             if (_reverseSourceMapping.TryGetValue(originalFile, out sourceLineToCollectionMap) &&
-                sourceLineToCollectionMap.TryGetValue(--line, out mappings))
+                sourceLineToCollectionMap.TryGetValue(position.Line, out mappings))
             {
                 return mappings;
             }
@@ -169,23 +178,10 @@ namespace NSourceMap
             return GetOriginalMappingForEntry(entries.Last());
         }
 
-        private OriginalMapping GetOriginalMappingForEntry(Entry entry)
-        {
-            if (entry.SourceFileId == UNMAPPED)
-            {
-                return null;
-            }
-            // Adjust the line/column here to be start at 1.
-            var x = new OriginalMapping.Builder()
-                .SetOriginalFile(_sources[entry.SourceFileId])
-                .SetLineNumber(entry.SourceLine + 1)
-                .SetColumnPosition(entry.SourceColumn + 1);
-            if (entry.NameId != UNMAPPED)
-            {
-                x.SetIdentifier(_names[entry.NameId]);
-            }
-            return x.Build();
-        }
+        private OriginalMapping GetOriginalMappingForEntry(Entry entry) =>
+            entry.SourceFileId == UNMAPPED
+                ? null
+                : new OriginalMapping(_sources[entry.SourceFileId], entry.SourceLine, entry.SourceColumn, entry.NameId == UNMAPPED ? null : _names[entry.NameId]);
 
         /// <summary>
         /// Reverse the source map; the created mapping will allow us to quickly go 
@@ -223,11 +219,7 @@ namespace NSourceMap
 
                     var mappings = lineToCollectionMap[sourceLine];
 
-                    var builder = new OriginalMapping.Builder()
-                        .SetLineNumber(targetLine)
-                        .SetColumnPosition(entry.GeneratedColumn);
-
-                    mappings.Add(builder.Build());
+                    mappings.Add(new OriginalMapping(lineNumber: targetLine, columnPosition: entry.GeneratedColumn));
                 }
             }
             return result;
