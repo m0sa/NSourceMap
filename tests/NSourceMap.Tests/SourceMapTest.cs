@@ -84,5 +84,21 @@ namespace NSourceMap.Tests
 
             Assert.StartsWith("AAAA;AAAC,GAAC;AAAC", map.mappings);
         }
+
+        [Fact]
+        public void DecodeEncodeTest() 
+        {
+            var consumer = new SourceMapConsumer();
+            consumer.Parse(SimpleSourceMap.Replace("AAAA;AAAC,GAAC", "AAAA;;AAAC,GAAC;"));
+
+            var generator = new SourceMapGenerator();
+            foreach(var m in consumer.Mappings)
+            {
+                generator.AddMapping(m);
+            }
+            var map = generator.Generate();
+
+            Assert.Contains("AAAA;;AAAC,GAAC;;AAAC,GAAC;AAAC,GAAC;AAAC,MAAG,IAAI,EAAC;OAAG;AAAC,SAAK;QAAG,KAAK,EAAC;SAAG;AAAC,WAAK;SAAG;AAAC;;CAAC", map.mappings);
+        }
     }
 }
