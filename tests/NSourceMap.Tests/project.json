@@ -3,6 +3,12 @@
   "description": "NSourceMap.Tests",
   "authors": [ "m0sa" ],
   "frameworks": {
+    "net451": {
+      "frameworkAssemblies": {
+        "System": "",
+        "System.Runtime": ""
+      }
+    },
     "netcoreapp1.0": {
       "imports": [ "dnxcore50", "portable-net451" ],
       "dependencies": {
