@@ -15,6 +15,8 @@ namespace NSourceMap.Tests
                 ""mappings"":""AAAA;AAAC,GAAC;AAAC,GAAC;AAAC,GAAC;AAAC,MAAG,IAAI,EAAC;OAAG;AAAC,SAAK;QAAG,KAAK,EAAC;SAAG;AAAC,WAAK;SAAG;AAAC;;CAAC"",
                 ""sourcesContent"": [""{1;2;3;if(true)100;else if(false)200;else 300;}""]
             }";
+
+        static readonly SourceMapObject SimpleSourceMapObject = Jil.JSON.Deserialize<SourceMapObject>(SimpleSourceMap);
             /* <stdin>:
 {1;2;3;if(true)100;else if(false)200;else 300;}
             /* compiled.js:
@@ -53,7 +55,7 @@ namespace NSourceMap.Tests
         {
             // from http://evanw.github.io/source-map-visualization/
             var consumer = new SourceMapConsumer();
-            consumer.Parse(SimpleSourceMap);
+            consumer.Parse(SimpleSourceMapObject);
 
             Mapping mapping;
 
@@ -93,7 +95,7 @@ namespace NSourceMap.Tests
         public void DecodeEncodeTest() 
         {
             var consumer = new SourceMapConsumer();
-            consumer.Parse(SimpleSourceMap);
+            consumer.Parse(SimpleSourceMapObject);
 
             var generator = new SourceMapGenerator();
             foreach(var m in consumer.Mappings)

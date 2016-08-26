@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jil;
 using static NSourceMap.Constants;
     
 namespace NSourceMap
@@ -19,19 +18,6 @@ namespace NSourceMap
         public string SourceRoot { get; private set; }
 
         private List<Mapping> _mappings;
-
-        public void Parse(string contents)
-        {
-            try
-            {
-                var sourceMapObject = JSON.Deserialize<SourceMapObject>(contents);
-                Parse(sourceMapObject);
-            }
-            catch (DeserializationException ex)
-            {
-                throw new SourceMapParseException("Failed parsing contents", ex);
-            }
-        }
 
         public Mapping GetMappingForLine(FilePosition pos)
         {
@@ -100,7 +86,7 @@ namespace NSourceMap
             return new Mapping[0];
         }
 
-        private void Parse(SourceMapObject sourceMapObject)
+        public void Parse(SourceMapObject sourceMapObject)
         {
             if (sourceMapObject.version != 3)
             {

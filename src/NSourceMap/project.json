@@ -3,10 +3,6 @@
   "description": "NSourceMap Library",
   "authors": [ "m0sa" ],
 
-  "dependencies": {
-    "Jil": "2.14.5"
-  },
-
   "frameworks": {
     "net451": {
       "frameworkAssemblies": {
