@@ -16,7 +16,7 @@ namespace NSourceMap.Tests
                 ""sourcesContent"": [""{1;2;3;if(true)100;else if(false)200;else 300;}""]
             }";
 
-        static readonly SourceMapObject SimpleSourceMapObject = Jil.JSON.Deserialize<SourceMapObject>(SimpleSourceMap);
+        static readonly SourceMapObject SimpleSourceMapObject =Newtonsoft.Json.JsonConvert.DeserializeObject<SourceMapObject>(SimpleSourceMap);
             /* <stdin>:
 {1;2;3;if(true)100;else if(false)200;else 300;}
             /* compiled.js:

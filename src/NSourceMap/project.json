@@ -9,6 +9,18 @@
         "System": "",
         "System.Runtime": ""
       }
+    },
+    "netcoreapp1.0": {
+      "imports": [ "dnxcore50", "portable-net451" ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0"
+        }
+      },
+      "buildOptions": {
+        "debugType": "portable"  
+      }
     }
   }
 }
