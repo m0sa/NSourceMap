@@ -5,8 +5,7 @@
   "frameworks": {
     "net451": {
       "frameworkAssemblies": {
-        "System": "",
-        "System.Runtime": ""
+        "System": ""
       }
     },
     "netcoreapp1.0": {
