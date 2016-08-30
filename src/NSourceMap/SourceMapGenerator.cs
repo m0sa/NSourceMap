@@ -311,13 +311,12 @@ namespace NSourceMap
     
     public class Mapping
     {
-        public Mapping(string source, FilePosition original, FilePosition generated, string name = null, FilePosition generatedEnd = null)
+        public Mapping(string source, FilePosition original, FilePosition generated, string name = null)
         {
             Source = source;
             Original = original;
             Generated = generated;
             Name = name;
-            GeneratedEnd = generatedEnd;
         }
 
         /// <summary>The original source file (relative to the sourceRoot).</summary>
