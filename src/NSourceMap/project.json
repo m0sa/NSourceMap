@@ -2,9 +2,8 @@
   "version": "1.0.0-*",
   "description": "NSourceMap Library",
   "authors": [ "m0sa" ],
-
   "frameworks": {
-    "net451": {
+    "net45": {
       "frameworkAssemblies": {
         "System": "",
         "System.Runtime": ""
