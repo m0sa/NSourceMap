@@ -153,11 +153,13 @@ namespace NSourceMap
                     sourceRoot = SourceRoot,
                     sources = _sourceFileMap.Items.ToArray(),
                     mappings = mappings,
-                    sourcesContent = _sourceFileMap.Items.Select(x =>
-                    {
-                        string src;
-                        return _sourceFileContentMap.TryGetValue(x, out src) ? src : null;
-                    }).ToArray(),
+                    sourcesContent = _sourceFileContentMap.Any() 
+                        ? _sourceFileMap.Items.Select(x =>
+                        {
+                            string src;
+                            return _sourceFileContentMap.TryGetValue(x, out src) ? src : null;
+                        }).ToArray()
+                        : null,
                     names = _nameMap.Items.ToArray(),
                 };
         }
@@ -326,9 +328,6 @@ namespace NSourceMap
 
         /// <summary>An object with the generated line and column positions.</summary>
         public FilePosition Generated { get; }
-
-        /// <summary>An object with the generated line and column positions.</summary>
-        public FilePosition GeneratedEnd { get; }
 
         /// <summary>An optional original token name for this mapping.</summary>
         public string Name { get; }
