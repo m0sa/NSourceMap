@@ -17,6 +17,8 @@ namespace NSourceMap
 
         public string SourceRoot { get; private set; }
 
+        public string File { get; private set; }
+
         private List<Mapping> _mappings;
 
         public Mapping GetMappingForLine(FilePosition pos)
@@ -53,7 +55,9 @@ namespace NSourceMap
         // originalFile path ==> original line ==> target mappings 
         private Dictionary<string, Dictionary<int, List<Mapping>>> _reverseSourceMapping;
 
-        public ICollection<string> OriginalSources => _sources.ToArray();
+        public Dictionary<string, string> SourcesContent { get; private set; }
+
+        public ICollection<string> Sources { get; private set; }
 
         /// <summary>
         /// Given a source file, line, and column, return the reverse mapping (source → target).
@@ -100,8 +104,11 @@ namespace NSourceMap
 
             _lineCount = sourceMapObject.lineCount ?? -1;
             SourceRoot = sourceMapObject.sourceRoot;
+            File = sourceMapObject.file;
             _sources = sourceMapObject.sources;
+            Sources = _sources.ToArray();
             _names = sourceMapObject.names;
+            SourcesContent = _sources.Zip(sourceMapObject.sourcesContent ?? new string[_sources.Length], (source, content) => new { source, content }).ToDictionary(x => x.source, x => x.content);
 
             _lines = _lineCount >= 0 ? new List<List<Entry>>(_lineCount) : new List<List<Entry>>();
             _mappings = new List<Mapping>();
