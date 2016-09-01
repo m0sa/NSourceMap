@@ -51,7 +51,7 @@ namespace NSourceMap
         }
 
         public ArraySegment<char> this[int index] => map[index];        
-        int IReadOnlyCollection<ArraySegment<char>>.Count => map.Length;
+        public int Count => map.Length;
         IEnumerator IEnumerable.GetEnumerator() => map.GetEnumerator();
         IEnumerator<ArraySegment<char>> IEnumerable<ArraySegment<char>>.GetEnumerator() => ((IEnumerable<ArraySegment<char>>)map).GetEnumerator();
 
