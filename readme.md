@@ -4,7 +4,7 @@ A .NET library for reading and writing sourcemaps.
 
 # Usage
 
-See the [tests](blob/master/tests/NSourceMap.Tests/SourceMapTest.cs)
+See the [tests](tests/NSourceMap.Tests/SourceMapTest.cs)
 
 # Development environment
 - [Visual Studio Code](https://code.visualstudio.com/Download)
