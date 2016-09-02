@@ -1,5 +1,5 @@
 ﻿{
-  "version": "0.1.0-*",
+  "version": "0.1.2-*",
   "description": "NSourceMap - source maps for .NET",
   "authors": [ "m0sa" ],
   "frameworks": {
