@@ -1,1 +1,0 @@
-.\tests\NSourceMap.Tests\bin\Debug\net451\win7-x64\NSourceMap.Tests.exe

@@ -1,6 +1,6 @@
 ﻿{
-  "version": "1.0.0-*",
-  "description": "NSourceMap Library",
+  "version": "0.1.0-*",
+  "description": "NSourceMap - reading and writing sourcemaps in dotnet",
   "authors": [ "m0sa" ],
   "frameworks": {
     "net45": {

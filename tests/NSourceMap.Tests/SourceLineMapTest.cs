@@ -55,7 +55,7 @@ namespace NSourceMap.Tests
 
         [Theory]
         [InlineData(6, 4)]
-        //[InlineData(13, 7)]
+        [InlineData(13, 7)]
         public void EndsWithNewLine_Substring(int offset, int count)
         {
             var expectedSource = new string(endsWithNewLine.Source.ToArray()).Substring(offset, count);
