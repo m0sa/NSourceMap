@@ -1,20 +1,18 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.25428.1
+VisualStudioVersion = 15.0.26403.7
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3173CC56-AB48-4686-890D-53877E4DA955}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B27563AA-6D46-42B0-B79E-7A96D5E59BCC}"
-	ProjectSection(SolutionItems) = preProject
-		global.json = global.json
-	EndProjectSection
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NSourceMap", "src\NSourceMap\NSourceMap.xproj", "{D2C3E782-B7D0-40D1-9796-809B7BD53022}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSourceMap", "src\NSourceMap\NSourceMap.csproj", "{D2C3E782-B7D0-40D1-9796-809B7BD53022}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0CDFA53E-F408-4F39-A16F-98C7DDFEFA14}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NSourceMap.Tests", "tests\NSourceMap.Tests\NSourceMap.Tests.xproj", "{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSourceMap.Tests", "tests\NSourceMap.Tests\NSourceMap.Tests.csproj", "{020E363E-DDD4-4B8C-9F50-A5D460C6DD2B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D2C3E782-B7D0-40D1-9796-809B7BD53022} = {D2C3E782-B7D0-40D1-9796-809B7BD53022}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

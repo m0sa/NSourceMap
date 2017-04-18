@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>NSourceMap</PackageId>
+    <PackageTags>c#;sourcemap;javascript</PackageTags>
+    <Title>NSourceMap</Title>
+    <Description>NSourceMap - source maps for .NET</Description>
+    <Authors>m0sa</Authors>
+    <TargetFrameworks>net45;netstandard1.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>
